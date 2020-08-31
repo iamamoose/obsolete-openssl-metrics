@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # requires python 3
 #
 # OpenSSL intersting PR stats on things that are stale
@@ -52,6 +52,9 @@ def parsepr(pr, days):
     sha = ""
 
     for event in repos:
+#        print (event['event'])
+#        print (event)
+#        print ()
         try:
             eventdate = ""
             if (event['event'] == "commented"):
@@ -68,10 +71,15 @@ def parsepr(pr, days):
             elif (event['event'] == "labeled" or event['event'] == "unlabeled"):
                 eventdate = event['created_at']
             elif (event['event'] == "reviewed"):
-                reviewed_state = "reviewed:"+event['state'] # replace with last review 
+                reviewed_state = "reviewed:"+event['state'] # replace with last review
                 eventdate = event['submitted_at']
+            elif (event['event'] == "review_requested"):
+                # If a review was requested after changes requested, remove changes requested label
+                reviewed_state = "reviewed:review pending";
+                eventdate = event['created_at']                
             if (eventdate != ""):
                 comments.append(convertdate(eventdate))
+#            print(reviewed_state)
         except:
             return (repos['message'])
 
@@ -97,7 +105,7 @@ def parsepr(pr, days):
     # Ignore anything "tagged" as work in progress, although we could do this earlier
     # do it here as we may wish, in the future, to still ping stale WIP items
     
-    if ('WIP' in pr['title']):
+    if ('title' in pr and 'WIP' in pr['title']):
         return
     
     data = {'pr':pr['number'],'days':dayssincelastupdate,'alldays':dayssincelastupdateall,'labels':labels}
@@ -111,6 +119,9 @@ def parsepr(pr, days):
     # for example if something is for after 1.1.1 but is waiting for a CLA
     # then we've time to get the CLA later, it's deferred.  
 
+    if ('stalled: awaiting contributor response' in labels):
+        stale["waiting for reporter"].append(data)
+        return        
     if ('hold: need omc' in labels or 'approval: omc' in labels):
         stale["waiting for OMC"].append(data)
         return
@@ -221,7 +232,7 @@ for pr in prs:
 if ("waiting for OMC" in stale):
     for item in stale["waiting for OMC"]:
         if (item['alldays']>=days):
-            comment = "This issue is in a state where it requires action by @openssl/omc but the last update was "+str(item['days'])+" days ago"
+            comment = "This PR is in a state where it requires action by @openssl/omc but the last update was "+str(item['days'])+" days ago"
             print ("   ",item['pr'],comment)
             if (options.commit):
                 addcommenttopr(item['pr'],comment)
@@ -229,7 +240,7 @@ if ("waiting for OMC" in stale):
 if ("waiting for OTC" in stale):
     for item in stale["waiting for OTC"]:
         if (item['alldays']>=days):        
-            comment = "This issue is in a state where it requires action by @openssl/otc but the last update was "+str(item['days'])+" days ago"
+            comment = "This PR is in a state where it requires action by @openssl/otc but the last update was "+str(item['days'])+" days ago"
             print ("   ",item['pr'],comment)
             if (options.commit):
                 addcommenttopr(item['pr'],comment)
@@ -237,10 +248,18 @@ if ("waiting for OTC" in stale):
 if ("waiting for review" in stale):
     for item in stale["waiting for review"]:
         if (item['alldays']>=days):        
-            comment = "This issue is in a state where it requires action by @openssl/committers but the last update was "+str(item['days'])+" days ago"
+            comment = "This PR is in a state where it requires action by @openssl/committers but the last update was "+str(item['days'])+" days ago"
             print ("   ",item['pr'],comment)
             if (options.commit):
-                addcommenttopr(item['pr'],comment)            
+                addcommenttopr(item['pr'],comment)
+
+if ("waiting for reporter" in stale):
+    for item in stale["waiting for reporter"]:
+        if (item['alldays']>=days):        
+            comment = "This PR is waiting for the creator to make requested changes but it has not been updated for "+str(item['days'])+" days.  If you have made changes or commented to the reviewer please make sure you re-request a review (see icon in the 'reviewers' section)."
+            print ("   ",item['pr'],comment)
+            if (options.commit):
+                addcommenttopr(item['pr'],comment)                            
 
 if ("cla required" in stale):
     for item in stale["cla required"]:
@@ -260,7 +279,7 @@ for reason in stale:
             outputcsv.writerow([now,reason,item['pr'],item['labels'],item['days']])
             
     print ("\n", reason," (", len(stale[reason]),"issues, median ",median(days)," days)\n"),
-    if (reason == "all" or "deferred" in reason or "cla required" in reason):
+    if (reason == "all" or "deferred" in reason):
         print ("   list of prs suppressed")
     else:
         for item in stale[reason]:
