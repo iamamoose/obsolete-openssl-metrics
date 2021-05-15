@@ -30,6 +30,20 @@ def addcommenttopr(issue,comment):
         print("Error adding comment", res.status_code, res.content)
     return
 
+# Note: Closing an issue doesn't add a comment by itself
+
+def closepr(issue,comment):
+    newcomment = {"body":comment}
+    url = api_url + "/issues/" + str(issue) + "/comments"
+    res = requests.post(url, data=json.dumps(newcomment), headers=headers)
+    if (res.status_code != 201):
+        print("Error adding comment", res.status_code, res.content)    
+    url = api_url + "/issues/" + str(issue)
+    res = requests.patch(url, data=json.dumps({"state":"closed"}), headers=headers)
+    if (res.status_code != 200):
+        print("Error closing pr", res.status_code, res.content)
+    return
+
 # Get all the open pull requests, filtering by approval: done label
 
 stale = collections.defaultdict(list)
@@ -187,6 +201,7 @@ parser = OptionParser()
 parser.add_option("-v","--debug",action="store_true",help="be noisy",dest="debug")
 parser.add_option("-t","--token",help="file containing github authentication token for example 'token 18asdjada...'",dest="token")
 parser.add_option("-d","--days",help="number of days for something to be stale",type=int, dest="days")
+parser.add_option("-D","--closedays",help="number of days for something to be closed. Will commit and close issues even without --commit flag",type=int, dest="closedays")
 parser.add_option("-c","--commit",action="store_true",help="actually add comments to issues",dest="commit")
 parser.add_option("-o","--output",dest="output",help="write a csv file out")
 parser.add_option("-p","--prs",dest="prs",help="instead of looking at all open prs just look at these comma separated ones")
@@ -255,7 +270,11 @@ if ("waiting for review" in stale):
 
 if ("waiting for reporter" in stale):
     for item in stale["waiting for reporter"]:
-        if (item['alldays']>=days):        
+        if (options.closedays and item['days']>=options.closedays):
+            comment = "This PR has been closed.  It was waiting for the creator to make requested changes but it has not been updated for "+str(item['days'])+" days."
+            print ("   ",item['pr'],comment)
+            closepr(item['pr'],comment)
+        elif (item['alldays']>=days):        
             comment = "This PR is waiting for the creator to make requested changes but it has not been updated for "+str(item['days'])+" days.  If you have made changes or commented to the reviewer please make sure you re-request a review (see icon in the 'reviewers' section)."
             print ("   ",item['pr'],comment)
             if (options.commit):
@@ -263,8 +282,11 @@ if ("waiting for reporter" in stale):
 
 if ("cla required" in stale):
     for item in stale["cla required"]:
-        if (item['alldays']>=days):
-
+        if (options.closedays and item['days']>=options.closedays):
+            comment = "This PR has been closed.  It was waiting for a CLA for "+str(item['days'])+" days."
+            print ("   ",item['pr'],comment)
+            closepr(item['pr'],comment)            
+        elif (item['alldays']>=days):
             comment = "This PR has the label 'hold: cla required' and is stale: it has not been updated in "+str(item['days'])+" days. Note that this PR may be automatically closed in the future if no CLA is provided.  For CLA help see https://www.openssl.org/policies/cla.html"
             print ("   ",item['pr'],comment)
             if (options.commit):
