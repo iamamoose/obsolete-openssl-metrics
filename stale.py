@@ -146,6 +146,9 @@ def parsepr(pr, days):
         ('branch: 1.1.1' in labels and 'branch: master' not in labels)):
         stale["deferred after 1.1.1"].append(data)
         return
+    if ('milestone:Post 3.0.0' in labels):
+        stale["deferred after 3.0.0"].append(data)
+        return        
     if ('hold: cla' in labels):
         stale["cla required"].append(data)
         return
