@@ -133,6 +133,14 @@ def parsepr(pr, days):
     # for example if something is for after 1.1.1 but is waiting for a CLA
     # then we've time to get the CLA later, it's deferred.  
 
+    if (('Post 1.1.1' in labels) or
+        ('branch: 1.1.1' in labels and 'branch: master' not in labels)):
+        stale["deferred after 3.0.0"].append(data)
+        return
+    if ('milestone:Post 3.0.0' in labels):
+        stale["deferred after 3.0.0"].append(data)
+        return        
+
     if ('stalled: awaiting contributor response' in labels):
         stale["waiting for reporter"].append(data)
         return        
@@ -142,13 +150,6 @@ def parsepr(pr, days):
     if ('hold: need otc' in labels or 'approval: otc' in labels):
         stale["waiting for OTC"].append(data)
         return
-    if (('Post 1.1.1' in labels) or
-        ('branch: 1.1.1' in labels and 'branch: master' not in labels)):
-        stale["deferred after 1.1.1"].append(data)
-        return
-    if ('milestone:Post 3.0.0' in labels):
-        stale["deferred after 3.0.0"].append(data)
-        return        
     if ('hold: cla' in labels):
         stale["cla required"].append(data)
         return
