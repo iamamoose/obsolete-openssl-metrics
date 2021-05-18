@@ -134,13 +134,9 @@ def parsepr(pr, days):
     # then we've time to get the CLA later, it's deferred.  
 
     if (('Post 1.1.1' in labels) or
-        ('branch: 1.1.1' in labels and 'branch: master' not in labels)):
+        ('milestone:Post 3.0.0' in labels)):
         stale["deferred after 3.0.0"].append(data)
         return
-    if ('milestone:Post 3.0.0' in labels):
-        stale["deferred after 3.0.0"].append(data)
-        return        
-
     if ('stalled: awaiting contributor response' in labels):
         stale["waiting for reporter"].append(data)
         return        
