@@ -273,7 +273,8 @@ if ("waiting for reporter" in stale):
         if (options.closedays and item['days']>=options.closedays):
             comment = "This PR has been closed.  It was waiting for the creator to make requested changes but it has not been updated for "+str(item['days'])+" days."
             print ("   ",item['pr'],comment)
-            closepr(item['pr'],comment)
+            if (options.commit):
+                closepr(item['pr'],comment)
         elif (item['alldays']>=days):        
             comment = "This PR is waiting for the creator to make requested changes but it has not been updated for "+str(item['days'])+" days.  If you have made changes or commented to the reviewer please make sure you re-request a review (see icon in the 'reviewers' section)."
             print ("   ",item['pr'],comment)
@@ -285,7 +286,8 @@ if ("cla required" in stale):
         if (options.closedays and item['days']>=options.closedays):
             comment = "This PR has been closed.  It was waiting for a CLA for "+str(item['days'])+" days."
             print ("   ",item['pr'],comment)
-            closepr(item['pr'],comment)            
+            if (options.commit):
+                closepr(item['pr'],comment)            
         elif (item['alldays']>=days):
             comment = "This PR has the label 'hold: cla required' and is stale: it has not been updated in "+str(item['days'])+" days. Note that this PR may be automatically closed in the future if no CLA is provided.  For CLA help see https://www.openssl.org/policies/cla.html"
             print ("   ",item['pr'],comment)
